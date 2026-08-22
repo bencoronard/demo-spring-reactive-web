@@ -1,0 +1,29 @@
+server:
+  address: "${SERVER_BIND_ADDRESS}"
+  port: "${SERVER_BIND_PORT}"
+
+management:
+  server:
+    port: "${SERVER_MANAGEMENT_PORT}"
+    base-path: "${spring.webflux.base-path}"
+
+spring:
+  main:
+    banner-mode: off
+  web:
+    error:
+      whitelabel:
+        enabled: false
+  application:
+    name: "${APP_NAME}"
+  webflux:
+    base-path: "${APP_CONTEXT_PATH}"
+  profiles:
+    active: "${APP_ENVIRONMENT}"
+
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+    import: classpath:.env.example[.properties]
