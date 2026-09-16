@@ -18,6 +18,9 @@ repositories {
 }
 
 dependencies {
+  implementation platform('software.amazon.awssdk:bom:2.54.19')
+  implementation 'software.amazon.awssdk:s3'
+  implementation 'software.amazon.awssdk:aws-crt-client'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-webclient'
