@@ -8,7 +8,7 @@ import org.springframework.web.reactive.result.method.annotation.ResponseEntityE
 import org.springframework.web.server.ServerWebExchange;
 
 @RestControllerAdvice
-class CommonExceptionHandler extends ResponseEntityExceptionHandler {
+final class CommonExceptionHandler extends ResponseEntityExceptionHandler {
 
   @Override
   protected ProblemDetail createProblemDetail(

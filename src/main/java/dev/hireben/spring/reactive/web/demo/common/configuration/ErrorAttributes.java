@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
 
 @Component
-class ErrorAttributes extends DefaultErrorAttributes {
+final class ErrorAttributes extends DefaultErrorAttributes {
 
   @Override
   public Map<String, @Nullable Object> getErrorAttributes(ServerRequest request, ErrorAttributeOptions options) {
