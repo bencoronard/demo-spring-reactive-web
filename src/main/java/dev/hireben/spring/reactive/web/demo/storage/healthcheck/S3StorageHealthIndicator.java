@@ -17,7 +17,7 @@ import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 @Slf4j
 @Component("s3Storage")
 @RequiredArgsConstructor
-public class S3StorageHealthIndicator implements ReactiveHealthIndicator {
+final class S3StorageHealthIndicator implements ReactiveHealthIndicator {
 
   private final S3Properties properties;
   private final S3AsyncClient client;
