@@ -7,12 +7,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.ResponseEntity.BodyBuilder;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.reactive.result.method.annotation.ResponseEntityExceptionHandler;
 import org.springframework.web.server.ServerWebExchange;
 
+import dev.hireben.spring.reactive.web.demo.common.exception.NotModifiedException;
 import dev.hireben.spring.reactive.web.demo.common.exception.api.ApplicationException;
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
@@ -72,6 +74,22 @@ final class CommonExceptionHandler extends ResponseEntityExceptionHandler {
         exchange);
 
     return super.createResponseEntity(pd, HttpHeaders.EMPTY, status, exchange);
+  }
+
+  @ExceptionHandler(NotModifiedException.class)
+  Mono<ResponseEntity<Void>> handleNotModifiedException(NotModifiedException ex) {
+
+    BodyBuilder response = ResponseEntity.status(HttpStatus.NOT_MODIFIED);
+
+    if (ex.getETag() != null && !ex.getETag().isBlank()) {
+      response.eTag(ex.getETag());
+    }
+
+    if (ex.getLastModified() != null) {
+      response.lastModified(ex.getLastModified());
+    }
+
+    return Mono.just(response.build());
   }
 
 }
