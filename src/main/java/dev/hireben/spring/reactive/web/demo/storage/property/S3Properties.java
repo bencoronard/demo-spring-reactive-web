@@ -23,7 +23,8 @@ public record S3Properties(
 
   public record Key(
       String prefix,
-      String metaOwner) {
+      String metaOwner,
+      String metaCreatedAt) {
   }
 
 }
