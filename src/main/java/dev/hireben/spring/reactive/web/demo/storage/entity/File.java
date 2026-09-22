@@ -16,12 +16,12 @@ import reactor.core.publisher.Flux;
 public class File {
 
   private String id;
+  private MediaType contentType;
+  private Long contentLength;
+  private String eTag;
+  private Instant lastModified;
   private String owner;
-  private MediaType type;
-  private Long size;
-  private String version;
   private Instant createdAt;
-  private Instant updatedAt;
 
   @ToString.Exclude
   @EqualsAndHashCode.Exclude
