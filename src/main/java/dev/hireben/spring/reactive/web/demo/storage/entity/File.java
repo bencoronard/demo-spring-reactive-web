@@ -3,6 +3,7 @@ package dev.hireben.spring.reactive.web.demo.storage.entity;
 import java.time.Instant;
 
 import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 
 import lombok.Builder;
@@ -16,12 +17,15 @@ import reactor.core.publisher.Flux;
 public class File {
 
   private String id;
-  private MediaType contentType;
-  private Long contentLength;
-  private String eTag;
-  private Instant lastModified;
   private String owner;
   private Instant createdAt;
+
+  private MediaType contentType;
+  private long contentLength;
+
+  private String eTag;
+  private Instant lastModified;
+  private CacheControl cacheControl;
 
   @ToString.Exclude
   @EqualsAndHashCode.Exclude
