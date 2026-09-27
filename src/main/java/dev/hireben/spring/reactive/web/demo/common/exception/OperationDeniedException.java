@@ -6,11 +6,11 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import dev.hireben.spring.reactive.web.demo.common.exception.api.ApplicationException;
 
 @ResponseStatus(HttpStatus.FORBIDDEN)
-public class InsufficientPermissionException extends ApplicationException {
+public class OperationDeniedException extends ApplicationException {
 
   private static final String CODE = "UNAUTHORIZED";
 
-  public InsufficientPermissionException() {
+  public OperationDeniedException() {
     super(CODE);
   }
 

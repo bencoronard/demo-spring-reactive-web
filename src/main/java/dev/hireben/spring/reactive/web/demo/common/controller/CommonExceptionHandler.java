@@ -89,6 +89,10 @@ final class CommonExceptionHandler extends ResponseEntityExceptionHandler {
       response.lastModified(ex.getLastModified());
     }
 
+    if (ex.getCacheControl() != null) {
+      response.cacheControl(ex.getCacheControl());
+    }
+
     return Mono.just(response.build());
   }
 
