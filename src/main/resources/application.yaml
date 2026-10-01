@@ -44,21 +44,26 @@ aws:
 storage:
   url: "${STORAGE_URL}"
   file:
-    supported:
-      id:
-        length: "${STORAGE_FILE_SUPPORTED_ID_LENGTH_CHAR}"
-      content:
-        length: "${STORAGE_FILE_SUPPORTED_CONTENT_LENGTH_BYTE}"
-        groups: "${STORAGE_FILE_SUPPORTED_CONTENT_GROUPS}"
-        types: "${STORAGE_FILE_SUPPORTED_CONTENT_TYPES}"
-    operation:
-      timeout: "${STORAGE_FILE_OPERATION_TIMEOUT_SEC}s"
-      upload:
-        timeout: "${STORAGE_FILE_UPLOAD_TIMEOUT_SEC}s"
-        idle-timeout: "${STORAGE_FILE_UPLOAD_IDLE_TIMEOUT_SEC}s"
-      download:
-        timeout: "${STORAGE_FILE_DOWNLOAD_TIMEOUT_SEC}s"
-        idle-timeout: "${STORAGE_FILE_DOWNLOAD_IDLE_TIMEOUT_SEC}s"
+    head:
+      timeout: "${STORAGE_FILE_HEAD_TIMEOUT_SEC}s"
+    delete:
+      timeout: "${STORAGE_FILE_DELETE_TIMEOUT_SEC}s"
+    download:
+      timeout: "${STORAGE_FILE_DOWNLOAD_TIMEOUT_SEC}s"
+      idle-timeout: "${STORAGE_FILE_DOWNLOAD_IDLE_TIMEOUT_SEC}s"
+    upload:
+      timeout: "${STORAGE_FILE_UPLOAD_TIMEOUT_SEC}s"
+      idle-timeout: "${STORAGE_FILE_UPLOAD_IDLE_TIMEOUT_SEC}s"
+      id-max-length: "${STORAGE_FILE_UPLOAD_MAX_ID_LENGTH_CHAR}"
+      content-max-length: "${STORAGE_FILE_UPLOAD_MAX_CONTENT_LENGTH_BYTE}"
+      content-types-allowed: "${STORAGE_FILE_UPLOAD_ALLOWED_CONTENT_TYPES}"
+      content-groups-allowed: "${STORAGE_FILE_UPLOAD_ALLOWED_CONTENT_GROUPS}"
+
+jwt:
+  verify:
+    key:
+      uri: "${JWT_VERIFY_KEY_URI}"
+
 ---
 spring:
   config:

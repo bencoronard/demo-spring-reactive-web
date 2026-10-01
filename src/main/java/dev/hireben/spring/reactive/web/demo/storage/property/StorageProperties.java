@@ -13,39 +13,33 @@ public record StorageProperties(
     File file) {
 
   public record File(
-      Supported supported,
-      Operation operation) {
+      Head head,
+      Delete delete,
+      Download download,
+      Upload upload) {
 
-    public record Supported(
-        Id id,
-        Content content) {
-
-      public record Id(
-          Integer length) {
-      }
-
-      public record Content(
-          Long length,
-          Set<String> groups,
-          Set<MediaType> types) {
-      }
+    public record Head(
+        Duration timeout) {
     }
 
-    public record Operation(
+    public record Delete(
+        Duration timeout) {
+    }
+
+    public record Download(
         Duration timeout,
-        Upload upload,
-        Download download) {
-
-      public record Upload(
-          Duration timeout,
-          Duration idleTimeout) {
-      }
-
-      public record Download(
-          Duration timeout,
-          Duration idleTimeout) {
-      }
+        Duration idleTimeout) {
     }
+
+    public record Upload(
+        Duration timeout,
+        Duration idleTimeout,
+        Integer idMaxLength,
+        Long contentMaxLength,
+        Set<MediaType> contentTypesAllowed,
+        Set<String> contentGroupsAllowed) {
+    }
+
   }
 
 }
