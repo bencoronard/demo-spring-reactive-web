@@ -1,15 +1,18 @@
 package dev.hireben.spring.reactive.web.demo.storage.service.api;
 
-import dev.hireben.spring.reactive.web.demo.common.dto.Precondition;
 import dev.hireben.spring.reactive.web.demo.storage.entity.File;
 import reactor.core.publisher.Mono;
 
 public interface FileService {
-  Mono<File> headFile(String id, Precondition precondition);
 
-  Mono<File> downloadFile(String id, Precondition precondition);
+  Mono<File> info(File file);
 
-  Mono<File> uploadFile(File file, Precondition precondition);
+  Mono<File> download(File file);
 
-  Mono<Void> removeFile(String id, String owner, Precondition precondition);
+  Mono<File> upload(File file);
+
+  Mono<File> replace(File file);
+
+  Mono<Void> remove(File file);
+
 }

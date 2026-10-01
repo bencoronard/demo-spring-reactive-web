@@ -1,15 +1,21 @@
 package dev.hireben.spring.reactive.web.demo.storage.repository.api;
 
-import dev.hireben.spring.reactive.web.demo.common.dto.Precondition;
+import org.springframework.core.io.buffer.DataBuffer;
+
 import dev.hireben.spring.reactive.web.demo.storage.entity.File;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public interface FileRepository {
-  Mono<File> head(String id, Precondition precondition);
 
-  Mono<File> load(String id, Precondition precondition);
+  Mono<File> head(File file);
 
-  Mono<File> save(File file, Precondition precondition);
+  Flux<DataBuffer> load(File file);
 
-  Mono<Void> delete(String id, Precondition precondition);
+  Mono<File> save(File file);
+
+  Mono<File> update(File file);
+
+  Mono<Void> delete(File file);
+
 }
