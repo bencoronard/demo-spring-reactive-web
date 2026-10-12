@@ -1,21 +1,20 @@
 package dev.hireben.spring.reactive.web.demo.storage.service;
 
-import java.io.FileNotFoundException;
+import java.time.Instant;
+
+import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.stereotype.Service;
 
 import dev.hireben.spring.reactive.web.demo.common.exception.GatewayTimedOutException;
-import dev.hireben.spring.reactive.web.demo.common.exception.NotModifiedException;
-import dev.hireben.spring.reactive.web.demo.common.exception.OperationDeniedException;
-import dev.hireben.spring.reactive.web.demo.common.exception.PreconditionFailedException;
 import dev.hireben.spring.reactive.web.demo.storage.entity.File;
 import dev.hireben.spring.reactive.web.demo.storage.exception.FileDownloadStalledException;
 import dev.hireben.spring.reactive.web.demo.storage.exception.FileDownloadTimedOutException;
-import dev.hireben.spring.reactive.web.demo.storage.exception.FileUploadStalledException;
-import dev.hireben.spring.reactive.web.demo.storage.exception.FileUploadTimedOutException;
+import dev.hireben.spring.reactive.web.demo.storage.exception.FileNotFoundException;
 import dev.hireben.spring.reactive.web.demo.storage.property.StorageProperties;
 import dev.hireben.spring.reactive.web.demo.storage.repository.api.FileRepository;
 import dev.hireben.spring.reactive.web.demo.storage.service.api.FileService;
 import lombok.RequiredArgsConstructor;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Service
@@ -26,109 +25,54 @@ final class FileServiceImpl implements FileService {
   private final FileRepository repository;
 
   @Override
-  public Mono<File> info(File file) {
+  public Mono<File> info(String id) {
     return repository
-        .head(file)
+        .head(id)
         .timeout(
             properties.file().operation().timeout(),
             Mono.error(GatewayTimedOutException::new))
-        .switchIfEmpty(Mono.error(FileNotFoundException::new))
-        .handle((existing, sink) -> {
-          if ((file.getETag() != null && file.getETag().equals(existing.getETag())) ||
-              (file.getLastModified() != null && file.getLastModified().isAfter(existing.getLastModified()))) {
-            sink.error(
-                new NotModifiedException(existing.getETag(), existing.getLastModified(), existing.getCacheControl()));
-            return;
-          }
-          sink.next(existing);
-        });
+        .switchIfEmpty(Mono.error(FileNotFoundException::new));
   }
 
   @Override
-  public Mono<File> download(File file) {
-    return this
-        .info(file)
-        .map(existing -> existing.toBuilder()
-            .content(repository
-                .load(existing)
-                .timeout(
-                    properties.file().operation().download().idleTimeout(),
-                    Mono.error(FileDownloadStalledException::new))
-                .takeUntilOther(
-                    Mono.delay(properties.file().operation().download().timeout())
-                        .flatMap(tick -> Mono.error(FileDownloadTimedOutException::new))))
-            .build());
-  }
-
-  @Override
-  public Mono<File> upload(File file) {
+  public Flux<DataBuffer> download(String id, String eTag) {
     return repository
-        .head(file)
+        .load(id, eTag)
+        .timeout(
+            properties.file().operation().download().idleTimeout(),
+            Mono.error(FileDownloadStalledException::new))
+        .takeUntilOther(
+            Mono.delay(properties.file().operation().download().timeout())
+                .flatMap(tick -> Mono.error(FileDownloadTimedOutException::new)));
+  }
+
+  @Override
+  public Mono<Void> remove(String id, String eTag) {
+    return repository
+        .delete(id, eTag)
         .timeout(
             properties.file().operation().timeout(),
-            Mono.error(GatewayTimedOutException::new))
-        .filter(existing -> file.getETag() == null || file.getETag().equals(existing.getETag()))
-        .switchIfEmpty(Mono.defer(() -> repository.save(file)));
+            Mono.error(GatewayTimedOutException::new));
   }
 
   @Override
-  public Mono<File> replace(File file) {
+  public Mono<File> upload(File file, Flux<DataBuffer> content) {
     return repository
-        .head(file)
-        .timeout(
-            properties.file().operation().timeout(),
-            Mono.error(GatewayTimedOutException::new))
-        .switchIfEmpty(Mono.error(FileNotFoundException::new))
-        // Update
-        .filter(existing -> existing.getOwner().equals(file.getOwner()))
-        .switchIfEmpty(Mono.error(OperationDeniedException::new))
-        .filter(existing -> file.getETag() == null || file.getETag().equals(existing.getETag()))
-        .switchIfEmpty(Mono.error(PreconditionFailedException::new))
-        .flatMap(existing -> repository.update(file.toBuilder()
-            .eTag(existing.getETag())
-            .content(file.getContent()
-                .timeout(
-                    properties.file().operation().upload().idleTimeout(),
-                    Mono.error(FileUploadStalledException::new))
-                .takeUntilOther(
-                    Mono.delay(properties.file().operation().upload().timeout())
-                        .flatMap(tick -> Mono.error(FileUploadTimedOutException::new))))
-            .build()))
-        // Insert
-        .onErrorResume(FileNotFoundException.class, ex -> {
-          if (file.getETag() != null) {
-            return Mono.error(ex);
-          }
-          return repository.save(file.toBuilder()
-              .content(file.getContent()
-                  .timeout(
-                      properties.file().operation().upload().idleTimeout(),
-                      Mono.error(FileUploadStalledException::new))
-                  .takeUntilOther(
-                      Mono.delay(properties.file().operation().upload().timeout())
-                          .flatMap(tick -> Mono.error(FileUploadTimedOutException::new))))
-              .build());
-        });
+        .save(
+            file.toBuilder()
+                .createdAt(Instant.now())
+                .lastModified(Instant.now())
+                .build(),
+            content);
   }
 
   @Override
-  public Mono<Void> remove(File file) {
+  public Mono<File> replace(File file, Flux<DataBuffer> content) {
     return repository
-        .head(file)
-        .timeout(
-            properties.file().operation().timeout(),
-            Mono.error(GatewayTimedOutException::new))
-        .switchIfEmpty(Mono.error(FileNotFoundException::new))
-        .filter(existing -> existing.getOwner().equals(file.getOwner()))
-        .switchIfEmpty(Mono.error(OperationDeniedException::new))
-        .filter(existing -> file.getETag() == null || file.getETag().equals(existing.getETag()))
-        .switchIfEmpty(Mono.error(PreconditionFailedException::new))
-        .flatMap(existing -> repository
-            .delete(existing)
-            .timeout(
-                properties.file().operation().timeout(),
-                Mono.error(GatewayTimedOutException::new)))
-        .onErrorComplete(FileNotFoundException.class);
+        .update(
+            file.toBuilder()
+                .build(),
+            content);
   }
 
 }

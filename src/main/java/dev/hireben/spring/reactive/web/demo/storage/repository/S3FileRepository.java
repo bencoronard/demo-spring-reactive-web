@@ -48,33 +48,33 @@ final class S3FileRepository implements FileRepository {
   }
 
   @Override
-  public Mono<File> head(File file) {
+  public Mono<File> head(String id) {
     // TODO Auto-generated method stub
     throw new UnsupportedOperationException("Unimplemented method 'head'");
   }
 
   @Override
-  public Flux<DataBuffer> load(File file) {
+  public Flux<DataBuffer> load(String id, String eTag) {
     // TODO Auto-generated method stub
     throw new UnsupportedOperationException("Unimplemented method 'load'");
   }
 
   @Override
-  public Mono<File> save(File file) {
+  public Mono<Void> delete(String id, String eTag) {
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException("Unimplemented method 'delete'");
+  }
+
+  @Override
+  public Mono<File> save(File file, Flux<DataBuffer> content) {
     // TODO Auto-generated method stub
     throw new UnsupportedOperationException("Unimplemented method 'save'");
   }
 
   @Override
-  public Mono<File> update(File file) {
+  public Mono<File> update(File file, Flux<DataBuffer> content) {
     // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'replace'");
-  }
-
-  @Override
-  public Mono<Void> delete(File file) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'delete'");
+    throw new UnsupportedOperationException("Unimplemented method 'update'");
   }
 
 }

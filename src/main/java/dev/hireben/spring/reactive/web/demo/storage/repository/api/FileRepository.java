@@ -8,14 +8,14 @@ import reactor.core.publisher.Mono;
 
 public interface FileRepository {
 
-  Mono<File> head(File file);
+  Mono<File> head(String id);
 
-  Flux<DataBuffer> load(File file);
+  Flux<DataBuffer> load(String id, String eTag);
 
-  Mono<File> save(File file);
+  Mono<File> save(File file, Flux<DataBuffer> content);
 
-  Mono<File> update(File file);
+  Mono<File> update(File file, Flux<DataBuffer> content);
 
-  Mono<Void> delete(File file);
+  Mono<Void> delete(String id, String eTag);
 
 }
