@@ -14,8 +14,11 @@ import dev.hireben.spring.reactive.web.demo.storage.repository.api.FileRepositor
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import software.amazon.awssdk.core.async.AsyncResponseTransformer;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
@@ -26,55 +29,64 @@ final class S3FileRepository implements FileRepository {
   private final S3Properties properties;
   private final S3AsyncClient client;
 
-  private static <T> Mono<T> mapExceptions(Mono<T> mono) {
-    return mono
-        .onErrorMap(NoSuchKeyException.class, ex -> new FileNotFoundException())
-        .onErrorMap(S3Exception.class, ex -> mapS3Exception(ex))
-        .onErrorMap(SdkClientException.class, ex -> mapSdkClientException(ex));
-  }
+  // private static <T> Mono<T> mapExceptions(Mono<T> mono) {
+  // return mono
+  // .onErrorMap(NoSuchKeyException.class, ex -> new FileNotFoundException())
+  // .onErrorMap(S3Exception.class, ex -> mapS3Exception(ex))
+  // .onErrorMap(SdkClientException.class, ex -> mapSdkClientException(ex));
+  // }
 
-  private static Throwable mapS3Exception(S3Exception ex) {
-    return switch (ex.statusCode()) {
-      case 409 -> new FileWriteConflictException();
-      default -> ex;
-    };
-  }
+  // private static Throwable mapS3Exception(S3Exception ex) {
+  // return switch (ex.statusCode()) {
+  // case 409 -> new FileWriteConflictException();
+  // default -> ex;
+  // };
+  // }
 
-  private static Throwable mapSdkClientException(SdkClientException ex) {
-    Throwable cause = ExceptionUtil.findCause(ex,
-        FileUploadStalledException.class,
-        FileUploadTimedOutException.class);
-    return cause != null ? cause : ex;
-  }
+  // private static Throwable mapSdkClientException(SdkClientException ex) {
+  // Throwable cause = ExceptionUtil.findCause(ex,
+  // FileUploadStalledException.class,
+  // FileUploadTimedOutException.class);
+  // return cause != null ? cause : ex;
+  // }
 
   @Override
   public Mono<File> head(String id) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'head'");
+    return Mono.fromFuture(() -> client.headObject(
+        HeadObjectRequest.builder()
+            .bucket(null)
+            .key(null)
+            .build()))
+        .map(response -> File.builder()
+            .id(id)
+            .contentType(response.contentType())
+            .contentLength(response.contentLength())
+            .eTag(response.eTag())
+            .lastModified(response.lastModified())
+            .cacheControl(response.cacheControl())
+            .owner(null)
+            .createdAt(null)
+            .build());
   }
 
   @Override
   public Flux<DataBuffer> load(String id, String eTag) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'load'");
+    return Mono.fromFuture(() -> client.getObject(
+        GetObjectRequest.builder()
+            .bucket(null)
+            .key(null)
+            .build(),
+        AsyncResponseTransformer.toPublisher()));
   }
 
   @Override
   public Mono<Void> delete(String id, String eTag) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'delete'");
+    return Mono.fromFuture(() -> null);
   }
 
   @Override
   public Mono<File> save(File file, Flux<DataBuffer> content) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'save'");
-  }
-
-  @Override
-  public Mono<File> update(File file, Flux<DataBuffer> content) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'update'");
+    return Mono.fromFuture(() -> null);
   }
 
 }

@@ -14,8 +14,6 @@ public interface FileRepository {
 
   Mono<File> save(File file, Flux<DataBuffer> content);
 
-  Mono<File> update(File file, Flux<DataBuffer> content);
-
   Mono<Void> delete(String id, String eTag);
 
 }

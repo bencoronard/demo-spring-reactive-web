@@ -2,9 +2,6 @@ package dev.hireben.spring.reactive.web.demo.storage.entity;
 
 import java.time.Instant;
 
-import org.springframework.http.CacheControl;
-import org.springframework.http.MediaType;
-
 import lombok.Builder;
 import lombok.Data;
 
@@ -15,10 +12,10 @@ public class File {
   private String owner;
   private Instant createdAt;
 
-  private MediaType contentType;
+  private String contentType;
   private long contentLength;
 
   private String eTag;
   private Instant lastModified;
-  private CacheControl cacheControl;
+  private String cacheControl;
 }

@@ -14,8 +14,6 @@ public interface FileService {
 
   Mono<File> upload(File file, Flux<DataBuffer> content);
 
-  Mono<File> replace(File file, Flux<DataBuffer> content);
-
   Mono<Void> remove(String id, String eTag);
 
 }

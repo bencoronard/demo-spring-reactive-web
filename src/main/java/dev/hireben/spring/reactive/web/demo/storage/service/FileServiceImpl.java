@@ -1,7 +1,5 @@
 package dev.hireben.spring.reactive.web.demo.storage.service;
 
-import java.time.Instant;
-
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.stereotype.Service;
 
@@ -10,6 +8,8 @@ import dev.hireben.spring.reactive.web.demo.storage.entity.File;
 import dev.hireben.spring.reactive.web.demo.storage.exception.FileDownloadStalledException;
 import dev.hireben.spring.reactive.web.demo.storage.exception.FileDownloadTimedOutException;
 import dev.hireben.spring.reactive.web.demo.storage.exception.FileNotFoundException;
+import dev.hireben.spring.reactive.web.demo.storage.exception.FileUploadStalledException;
+import dev.hireben.spring.reactive.web.demo.storage.exception.FileUploadTimedOutException;
 import dev.hireben.spring.reactive.web.demo.storage.property.StorageProperties;
 import dev.hireben.spring.reactive.web.demo.storage.repository.api.FileRepository;
 import dev.hireben.spring.reactive.web.demo.storage.service.api.FileService;
@@ -47,32 +47,24 @@ final class FileServiceImpl implements FileService {
   }
 
   @Override
+  public Mono<File> upload(File file, Flux<DataBuffer> content) {
+    return repository
+        .save(file, content
+            .timeout(
+                properties.file().operation().upload().idleTimeout(),
+                Mono.error(FileUploadStalledException::new))
+            .takeUntilOther(
+                Mono.delay(properties.file().operation().upload().timeout())
+                    .flatMap(tick -> Mono.error(FileUploadTimedOutException::new))));
+  }
+
+  @Override
   public Mono<Void> remove(String id, String eTag) {
     return repository
         .delete(id, eTag)
         .timeout(
             properties.file().operation().timeout(),
             Mono.error(GatewayTimedOutException::new));
-  }
-
-  @Override
-  public Mono<File> upload(File file, Flux<DataBuffer> content) {
-    return repository
-        .save(
-            file.toBuilder()
-                .createdAt(Instant.now())
-                .lastModified(Instant.now())
-                .build(),
-            content);
-  }
-
-  @Override
-  public Mono<File> replace(File file, Flux<DataBuffer> content) {
-    return repository
-        .update(
-            file.toBuilder()
-                .build(),
-            content);
   }
 
 }

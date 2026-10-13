@@ -13,11 +13,11 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.io.FileNotFoundException;
-import java.util.Optional;
+import java.time.Instant;
 
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -43,11 +43,50 @@ final class FileController {
         .filter(current -> !exchange.checkNotModified(current.getETag(), current.getLastModified()))
         .map(current -> ResponseEntity
             .ok()
-            .contentType(current.getContentType())
+            .contentType(MediaType.parseMediaType(current.getContentType()))
             .contentLength(current.getContentLength())
             .body(exchange.getRequest().getMethod() == HttpMethod.HEAD
                 ? Flux.empty()
                 : service.download(id, current.getETag())));
+  }
+
+  @PutMapping
+  Mono<ResponseEntity<Void>> uploadHandler(
+      @PathVariable String id,
+      @AuthorizationHeader Client client,
+      @RequestBody Flux<DataBuffer> content,
+      ServerWebExchange exchange) {
+    return service.info(id)
+        .filter(current -> current.getOwner().equals(client.id()))
+        .switchIfEmpty(Mono.error(OperationDeniedException::new))
+        .filter(current -> !exchange.checkNotModified(current.getETag(), current.getLastModified()))
+        .flatMap(current -> service.upload(
+            current.toBuilder()
+                .contentType(exchange.getRequest().getHeaders().getContentType().toString())
+                .contentLength(exchange.getRequest().getHeaders().getContentLength())
+                .cacheControl(exchange.getRequest().getHeaders().getCacheControl())
+                .build(),
+            content)
+            .map(file -> ResponseEntity
+                .noContent()
+                .eTag(file.getETag())
+                .lastModified(file.getLastModified())
+                .<Void>build()))
+        .onErrorResume(FileNotFoundException.class, ex -> service.upload(
+            File.builder()
+                .id(id)
+                .owner(client.id())
+                .createdAt(Instant.now())
+                .contentType(exchange.getRequest().getHeaders().getContentType().toString())
+                .contentLength(exchange.getRequest().getHeaders().getContentLength())
+                .cacheControl(exchange.getRequest().getHeaders().getCacheControl())
+                .build(),
+            content)
+            .map(file -> ResponseEntity
+                .created(exchange.getRequest().getURI())
+                .eTag(file.getETag())
+                .lastModified(file.getLastModified())
+                .build()));
   }
 
   @DeleteMapping
@@ -62,39 +101,6 @@ final class FileController {
         .flatMap(current -> service.remove(id, current.getETag()).thenReturn(true))
         .onErrorReturn(FileNotFoundException.class, true)
         .map(removed -> ResponseEntity.noContent().build());
-  }
-
-  @PutMapping
-  Mono<ResponseEntity<Void>> uploadHandler(
-      @PathVariable String id,
-      @AuthorizationHeader Client client,
-      @RequestBody Flux<DataBuffer> content,
-      ServerWebExchange exchange) {
-    // If-Match: eTag -> update
-    // If-None-Match: * -> eTag -> create
-    return service.info(id)
-        .map(Optional::of)
-        .onErrorReturn(FileNotFoundException.class, Optional.empty())
-        .filter(current -> current.map(f -> f.getOwner().equals(client.id())).orElse(true))
-        .switchIfEmpty(Mono.error(OperationDeniedException::new))
-        .flatMap(current -> {
-          boolean exists = current.isPresent();
-          boolean failed = exists
-              ? exchange.checkNotModified(current.get().getETag(), current.get().getLastModified())
-              : !exchange.getRequest().getHeaders().getIfMatch().isEmpty();
-          if (failed) {
-            return Mono.just(ResponseEntity.status(HttpStatus.PRECONDITION_FAILED).<Void>build());
-          }
-          return service
-              .upload(id, client.id(), exchange.getRequest().getHeaders().getContentType(), content,
-                  current.map(File::getETag).orElse(null))
-              .map(saved -> (exists
-                  ? ResponseEntity.noContent()
-                  : ResponseEntity.created(exchange.getRequest().getURI()))
-                  .eTag(saved.getETag())
-                  .lastModified(saved.getLastModified())
-                  .build());
-        });
   }
 
 }
