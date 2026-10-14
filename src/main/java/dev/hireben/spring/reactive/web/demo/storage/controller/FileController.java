@@ -70,7 +70,6 @@ final class FileController {
             .map(file -> ResponseEntity
                 .noContent()
                 .eTag(file.getETag())
-                .lastModified(file.getLastModified())
                 .<Void>build()))
         .onErrorResume(FileNotFoundException.class, ex -> service.upload(
             File.builder()
@@ -85,7 +84,6 @@ final class FileController {
             .map(file -> ResponseEntity
                 .created(exchange.getRequest().getURI())
                 .eTag(file.getETag())
-                .lastModified(file.getLastModified())
                 .build()));
   }
 
