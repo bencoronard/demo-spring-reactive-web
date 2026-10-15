@@ -13,9 +13,9 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.io.FileNotFoundException;
+import java.nio.ByteBuffer;
 import java.time.Instant;
 
-import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -34,7 +34,7 @@ final class FileController {
   private final FileService service;
 
   @GetMapping
-  Mono<ResponseEntity<Flux<DataBuffer>>> downloadHandler(
+  Mono<ResponseEntity<Flux<ByteBuffer>>> downloadHandler(
       @PathVariable String id,
       @AuthorizationHeader Client client,
       ServerWebExchange exchange) {
@@ -54,7 +54,7 @@ final class FileController {
   Mono<ResponseEntity<Void>> uploadHandler(
       @PathVariable String id,
       @AuthorizationHeader Client client,
-      @RequestBody Flux<DataBuffer> content,
+      @RequestBody Flux<ByteBuffer> content,
       ServerWebExchange exchange) {
     return service.info(id)
         .filter(current -> current.getOwner().equals(client.id()))

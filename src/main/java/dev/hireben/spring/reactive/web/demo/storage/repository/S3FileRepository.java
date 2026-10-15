@@ -2,10 +2,8 @@ package dev.hireben.spring.reactive.web.demo.storage.repository;
 
 import java.nio.ByteBuffer;
 import java.time.Instant;
+import java.util.Map;
 
-import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DataBufferFactory;
-import org.springframework.core.io.buffer.DefaultDataBufferFactory;
 import org.springframework.stereotype.Repository;
 
 import dev.hireben.spring.reactive.web.demo.common.utility.ExceptionUtil;
@@ -37,36 +35,34 @@ final class S3FileRepository implements FileRepository {
   private final S3Properties properties;
   private final S3AsyncClient client;
 
-  private final DataBufferFactory bufferFactory = new DefaultDataBufferFactory();
+  private static <T> Mono<T> mapExceptions(Mono<T> mono) {
+    return mono
+        .onErrorMap(NoSuchKeyException.class, ex -> new FileNotFoundException())
+        .onErrorMap(S3Exception.class, ex -> mapS3Exception(ex))
+        .onErrorMap(SdkClientException.class, ex -> mapSdkClientException(ex));
+  }
 
-  // private static <T> Mono<T> mapExceptions(Mono<T> mono) {
-  // return mono
-  // .onErrorMap(NoSuchKeyException.class, ex -> new FileNotFoundException())
-  // .onErrorMap(S3Exception.class, ex -> mapS3Exception(ex))
-  // .onErrorMap(SdkClientException.class, ex -> mapSdkClientException(ex));
-  // }
+  private static Throwable mapS3Exception(S3Exception ex) {
+    return switch (ex.statusCode()) {
+      case 409, 412 -> new FileWriteConflictException();
+      default -> ex;
+    };
+  }
 
-  // private static Throwable mapS3Exception(S3Exception ex) {
-  // return switch (ex.statusCode()) {
-  // case 409 -> new FileWriteConflictException();
-  // default -> ex;
-  // };
-  // }
-
-  // private static Throwable mapSdkClientException(SdkClientException ex) {
-  // Throwable cause = ExceptionUtil.findCause(ex,
-  // FileUploadStalledException.class,
-  // FileUploadTimedOutException.class);
-  // return cause != null ? cause : ex;
-  // }
+  private static Throwable mapSdkClientException(SdkClientException ex) {
+    Throwable cause = ExceptionUtil.findCause(ex,
+        FileUploadStalledException.class,
+        FileUploadTimedOutException.class);
+    return cause != null ? cause : ex;
+  }
 
   @Override
   public Mono<File> head(String id) {
     HeadObjectRequest request = HeadObjectRequest.builder()
-        .bucket(null)
-        .key(null)
+        .bucket(properties.bucket())
+        .key(String.join("/", properties.storage().key().prefix(), id))
         .build();
-    return Mono.fromFuture(() -> client
+    Mono<File> mono = Mono.fromFuture(() -> client
         .headObject(request))
         .map(response -> File.builder()
             .id(id)
@@ -75,48 +71,56 @@ final class S3FileRepository implements FileRepository {
             .eTag(response.eTag())
             .lastModified(response.lastModified())
             .cacheControl(response.cacheControl())
-            .owner(null)
-            .createdAt(null)
+            .owner(response.metadata().get(properties.storage().key().metaOwner()))
+            .createdAt(Instant.parse(response.metadata().get(properties.storage().key().metaCreatedAt())))
             .build());
+    return mapExceptions(mono);
   }
 
   @Override
-  public Flux<DataBuffer> load(String id, String eTag) {
+  public Flux<ByteBuffer> load(String id, String eTag) {
     GetObjectRequest request = GetObjectRequest.builder()
-        .bucket(null)
-        .key(null)
+        .bucket(properties.bucket())
+        .key(String.join("/", properties.storage().key().prefix(), id))
+        .ifMatch(eTag)
         .build();
     return Mono.fromFuture(() -> client
         .getObject(request, AsyncResponseTransformer.toPublisher()))
-        .flatMapMany(publisher -> Flux.from(publisher)
-            .map(bufferFactory::wrap));
+        .flatMapMany(publisher -> Flux.from(publisher));
+  }
+
+  @Override
+  public Mono<File> save(File file, Flux<ByteBuffer> content) {
+    PutObjectRequest.Builder builder = PutObjectRequest.builder()
+        .bucket(properties.bucket())
+        .key(String.join("/", properties.storage().key().prefix(), file.getId()))
+        .metadata(Map.of(
+            properties.storage().key().metaOwner(), file.getOwner(),
+            properties.storage().key().metaCreatedAt(), file.getCreatedAt().toString()));
+    if (file.getETag() != null) {
+      builder.ifMatch(file.getETag());
+    } else {
+      builder.ifNoneMatch("*");
+    }
+    Mono<File> mono = Mono.fromFuture(() -> client
+        .putObject(builder.build(), AsyncRequestBody.fromPublisher(content)))
+        .map(response -> file.toBuilder()
+            .eTag(response.eTag())
+            .build());
+    return mapExceptions(mono);
   }
 
   @Override
   public Mono<Void> delete(String id, String eTag) {
     DeleteObjectRequest request = DeleteObjectRequest.builder()
-        .bucket(null)
-        .key(null)
+        .bucket(properties.bucket())
+        .key(String.join("/", properties.storage().key().prefix(), id))
+        .ifMatch(eTag)
         .build();
-    return Mono.fromFuture(() -> client
+    Mono<Void> mono = Mono.fromFuture(() -> client
         .deleteObject(request))
         .then();
-  }
-
-  @Override
-  public Mono<File> save(File file, Flux<DataBuffer> content) {
-    PutObjectRequest request = PutObjectRequest.builder()
-        .bucket(null)
-        .key(null)
-        .build();
-
-    Flux<ByteBuffer> body = content.flatMapSequential(buffer -> Flux.fromIterable(buffer::readableByteBuffers));
-
-    return Mono.fromFuture(() -> client
-        .putObject(request, AsyncRequestBody.fromPublisher(body)))
-        .map(response -> file.toBuilder()
-            .eTag(response.eTag())
-            .build());
+    return mapExceptions(mono);
   }
 
 }

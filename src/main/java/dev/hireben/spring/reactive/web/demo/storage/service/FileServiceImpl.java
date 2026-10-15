@@ -1,6 +1,7 @@
 package dev.hireben.spring.reactive.web.demo.storage.service;
 
-import org.springframework.core.io.buffer.DataBuffer;
+import java.nio.ByteBuffer;
+
 import org.springframework.stereotype.Service;
 
 import dev.hireben.spring.reactive.web.demo.common.exception.GatewayTimedOutException;
@@ -35,7 +36,7 @@ final class FileServiceImpl implements FileService {
   }
 
   @Override
-  public Flux<DataBuffer> download(String id, String eTag) {
+  public Flux<ByteBuffer> download(String id, String eTag) {
     return repository
         .load(id, eTag)
         .timeout(
@@ -47,7 +48,7 @@ final class FileServiceImpl implements FileService {
   }
 
   @Override
-  public Mono<File> upload(File file, Flux<DataBuffer> content) {
+  public Mono<File> upload(File file, Flux<ByteBuffer> content) {
     return repository
         .save(file, content
             .timeout(

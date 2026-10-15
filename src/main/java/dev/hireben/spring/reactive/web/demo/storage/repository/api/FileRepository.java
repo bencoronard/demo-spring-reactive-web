@@ -1,6 +1,6 @@
 package dev.hireben.spring.reactive.web.demo.storage.repository.api;
 
-import org.springframework.core.io.buffer.DataBuffer;
+import java.nio.ByteBuffer;
 
 import dev.hireben.spring.reactive.web.demo.storage.entity.File;
 import reactor.core.publisher.Flux;
@@ -10,9 +10,9 @@ public interface FileRepository {
 
   Mono<File> head(String id);
 
-  Flux<DataBuffer> load(String id, String eTag);
+  Flux<ByteBuffer> load(String id, String eTag);
 
-  Mono<File> save(File file, Flux<DataBuffer> content);
+  Mono<File> save(File file, Flux<ByteBuffer> content);
 
   Mono<Void> delete(String id, String eTag);
 
