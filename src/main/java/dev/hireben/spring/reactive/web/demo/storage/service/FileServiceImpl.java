@@ -8,7 +8,6 @@ import dev.hireben.spring.reactive.web.demo.common.exception.GatewayTimedOutExce
 import dev.hireben.spring.reactive.web.demo.storage.entity.File;
 import dev.hireben.spring.reactive.web.demo.storage.exception.FileDownloadStalledException;
 import dev.hireben.spring.reactive.web.demo.storage.exception.FileDownloadTimedOutException;
-import dev.hireben.spring.reactive.web.demo.storage.exception.FileNotFoundException;
 import dev.hireben.spring.reactive.web.demo.storage.exception.FileUploadStalledException;
 import dev.hireben.spring.reactive.web.demo.storage.exception.FileUploadTimedOutException;
 import dev.hireben.spring.reactive.web.demo.storage.property.StorageProperties;
@@ -31,8 +30,7 @@ final class FileServiceImpl implements FileService {
         .head(id)
         .timeout(
             properties.file().operation().timeout(),
-            Mono.error(GatewayTimedOutException::new))
-        .switchIfEmpty(Mono.error(FileNotFoundException::new));
+            Mono.error(GatewayTimedOutException::new));
   }
 
   @Override

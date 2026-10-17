@@ -35,34 +35,13 @@ final class S3FileRepository implements FileRepository {
   private final S3Properties properties;
   private final S3AsyncClient client;
 
-  private static <T> Mono<T> mapExceptions(Mono<T> mono) {
-    return mono
-        .onErrorMap(NoSuchKeyException.class, ex -> new FileNotFoundException())
-        .onErrorMap(S3Exception.class, ex -> mapS3Exception(ex))
-        .onErrorMap(SdkClientException.class, ex -> mapSdkClientException(ex));
-  }
-
-  private static Throwable mapS3Exception(S3Exception ex) {
-    return switch (ex.statusCode()) {
-      case 409, 412 -> new FileWriteConflictException();
-      default -> ex;
-    };
-  }
-
-  private static Throwable mapSdkClientException(SdkClientException ex) {
-    Throwable cause = ExceptionUtil.findCause(ex,
-        FileUploadStalledException.class,
-        FileUploadTimedOutException.class);
-    return cause != null ? cause : ex;
-  }
-
   @Override
   public Mono<File> head(String id) {
     HeadObjectRequest request = HeadObjectRequest.builder()
         .bucket(properties.bucket())
         .key(String.join("/", properties.storage().key().prefix(), id))
         .build();
-    Mono<File> mono = Mono.fromFuture(() -> client
+    return Mono.fromFuture(() -> client
         .headObject(request))
         .map(response -> File.builder()
             .id(id)
@@ -73,8 +52,8 @@ final class S3FileRepository implements FileRepository {
             .cacheControl(response.cacheControl())
             .owner(response.metadata().get(properties.storage().key().metaOwner()))
             .createdAt(Instant.parse(response.metadata().get(properties.storage().key().metaCreatedAt())))
-            .build());
-    return mapExceptions(mono);
+            .build())
+        .onErrorMap(NoSuchKeyException.class, ex -> new FileNotFoundException());
   }
 
   @Override
@@ -86,7 +65,14 @@ final class S3FileRepository implements FileRepository {
         .build();
     return Mono.fromFuture(() -> client
         .getObject(request, AsyncResponseTransformer.toPublisher()))
-        .flatMapMany(publisher -> Flux.from(publisher));
+        .flatMapMany(publisher -> Flux.from(publisher))
+        .onErrorMap(NoSuchKeyException.class, ex -> new FileNotFoundException())
+        .onErrorMap(S3Exception.class, ex -> {
+          return switch (ex.statusCode()) {
+            case 412 -> new FileNotFoundException();
+            default -> ex;
+          };
+        });
   }
 
   @Override
@@ -97,17 +83,31 @@ final class S3FileRepository implements FileRepository {
         .metadata(Map.of(
             properties.storage().key().metaOwner(), file.getOwner(),
             properties.storage().key().metaCreatedAt(), file.getCreatedAt().toString()));
+
     if (file.getETag() != null) {
       builder.ifMatch(file.getETag());
     } else {
       builder.ifNoneMatch("*");
     }
-    Mono<File> mono = Mono.fromFuture(() -> client
+
+    return Mono.fromFuture(() -> client
         .putObject(builder.build(), AsyncRequestBody.fromPublisher(content)))
         .map(response -> file.toBuilder()
             .eTag(response.eTag())
-            .build());
-    return mapExceptions(mono);
+            .build())
+        .onErrorMap(NoSuchKeyException.class, ex -> new FileWriteConflictException())
+        .onErrorMap(S3Exception.class, ex -> {
+          return switch (ex.statusCode()) {
+            case 409, 412 -> new FileWriteConflictException();
+            default -> ex;
+          };
+        })
+        .onErrorMap(SdkClientException.class, ex -> {
+          Throwable cause = ExceptionUtil.findCause(ex,
+              FileUploadStalledException.class,
+              FileUploadTimedOutException.class);
+          return cause != null ? cause : ex;
+        });
   }
 
   @Override
@@ -117,10 +117,16 @@ final class S3FileRepository implements FileRepository {
         .key(String.join("/", properties.storage().key().prefix(), id))
         .ifMatch(eTag)
         .build();
-    Mono<Void> mono = Mono.fromFuture(() -> client
+    return Mono.fromFuture(() -> client
         .deleteObject(request))
-        .then();
-    return mapExceptions(mono);
+        .then()
+        .onErrorComplete(NoSuchKeyException.class)
+        .onErrorMap(S3Exception.class, ex -> {
+          return switch (ex.statusCode()) {
+            case 409, 412 -> new FileWriteConflictException();
+            default -> ex;
+          };
+        });
   }
 
 }
