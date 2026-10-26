@@ -1,0 +1,24 @@
+x-admin-user: &user "admin123"
+x-admin-pass: &pass "P@ssw0rd12345678"
+
+services:
+  garage:
+    image: docker.io/dxflrs/garage:v2.5.0
+    restart: unless-stopped
+    volumes:
+      - ./garage.toml:/etc/garage.toml:z,ro
+      - garage_meta:/var/lib/garage/meta
+      - garage_data:/var/lib/garage/data
+    ports:
+      - '3900:3900'
+      - '3901:3901'
+    environment:
+      GARAGE_RPC_SECRET: 644939fc831926f808b0e1762c22a72e0cd035a4ff2709520930b17504aa4749
+      GARAGE_DEFAULT_ACCESS_KEY: *user
+      GARAGE_DEFAULT_SECRET_KEY: *pass
+      GARAGE_DEFAULT_BUCKET: "local-storage"
+    command: ["/garage", "server", "--single-node", "--default-bucket"]
+    
+volumes:
+  garage_meta:
+  garage_data:
