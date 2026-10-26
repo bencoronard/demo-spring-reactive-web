@@ -19,4 +19,8 @@ public class ExceptionUtil {
     return null;
   }
 
+  public String errorMessageSourceKey(String prefix, String key) {
+    return String.join(".", prefix, "error", key);
+  }
+
 }

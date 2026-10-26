@@ -6,11 +6,11 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import dev.hireben.spring.reactive.web.demo.common.exception.api.ApplicationException;
 
 @ResponseStatus(HttpStatus.UNAUTHORIZED)
-public class UnauthenticatedClientException extends ApplicationException {
+public class TokenInvalidException extends ApplicationException {
 
-  private static final String CODE = "UNAUTHENTICATED";
+  private static final String CODE = "TOKEN_INVALID";
 
-  public UnauthenticatedClientException() {
+  public TokenInvalidException() {
     super(CODE);
   }
 

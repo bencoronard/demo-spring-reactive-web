@@ -53,7 +53,7 @@ final class S3FileRepository implements FileRepository {
             .owner(response.metadata().get(properties.storage().key().metaOwner()))
             .createdAt(Instant.parse(response.metadata().get(properties.storage().key().metaCreatedAt())))
             .build())
-        .onErrorMap(NoSuchKeyException.class, ex -> new FileNotFoundException());
+        .onErrorMap(NoSuchKeyException.class, ex -> new FileNotFoundException(id));
   }
 
   @Override
@@ -66,10 +66,10 @@ final class S3FileRepository implements FileRepository {
     return Mono.fromFuture(() -> client
         .getObject(request, AsyncResponseTransformer.toPublisher()))
         .flatMapMany(publisher -> Flux.from(publisher))
-        .onErrorMap(NoSuchKeyException.class, ex -> new FileNotFoundException())
+        .onErrorMap(NoSuchKeyException.class, ex -> new FileNotFoundException(id))
         .onErrorMap(S3Exception.class, ex -> {
           return switch (ex.statusCode()) {
-            case 412 -> new FileNotFoundException();
+            case 412 -> new FileNotFoundException(id);
             default -> ex;
           };
         });
@@ -80,6 +80,8 @@ final class S3FileRepository implements FileRepository {
     PutObjectRequest.Builder builder = PutObjectRequest.builder()
         .bucket(properties.bucket())
         .key(String.join("/", properties.storage().key().prefix(), file.getId()))
+        .contentType(file.getContentType())
+        .contentLength(file.getContentLength())
         .metadata(Map.of(
             properties.storage().key().metaOwner(), file.getOwner(),
             properties.storage().key().metaCreatedAt(), file.getCreatedAt().toString()));
@@ -95,10 +97,10 @@ final class S3FileRepository implements FileRepository {
         .map(response -> file.toBuilder()
             .eTag(response.eTag())
             .build())
-        .onErrorMap(NoSuchKeyException.class, ex -> new FileWriteConflictException())
+        .onErrorMap(NoSuchKeyException.class, ex -> new FileWriteConflictException(file.getId()))
         .onErrorMap(S3Exception.class, ex -> {
           return switch (ex.statusCode()) {
-            case 409, 412 -> new FileWriteConflictException();
+            case 409, 412 -> new FileWriteConflictException(file.getId());
             default -> ex;
           };
         })
@@ -123,7 +125,7 @@ final class S3FileRepository implements FileRepository {
         .onErrorComplete(NoSuchKeyException.class)
         .onErrorMap(S3Exception.class, ex -> {
           return switch (ex.statusCode()) {
-            case 409, 412 -> new FileWriteConflictException();
+            case 409, 412 -> new FileWriteConflictException(id);
             default -> ex;
           };
         });

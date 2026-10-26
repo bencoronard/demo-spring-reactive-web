@@ -14,6 +14,7 @@ import org.springframework.web.reactive.result.method.annotation.ResponseEntityE
 import org.springframework.web.server.ServerWebExchange;
 
 import dev.hireben.spring.reactive.web.demo.common.exception.api.ApplicationException;
+import dev.hireben.spring.reactive.web.demo.common.utility.ExceptionUtil;
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
 
@@ -51,6 +52,7 @@ final class CommonExceptionHandler extends ResponseEntityExceptionHandler {
   }
 
   // TODO: override handleMethodValidationException
+  // TODO: handleConstraintViolationException
 
   @ExceptionHandler(ApplicationException.class)
   Mono<ResponseEntity<Object>> handleApplicationException(
@@ -69,8 +71,8 @@ final class CommonExceptionHandler extends ResponseEntityExceptionHandler {
         ex,
         status,
         null,
-        String.join(".", "common", "error", ex.getCode().toLowerCase()),
-        null,
+        ExceptionUtil.errorMessageSourceKey(ex.getMessageCodePrefix(), ex.getCode().toLowerCase()),
+        ex.getArguments(),
         exchange);
 
     return super.createResponseEntity(pd, HttpHeaders.EMPTY, status, exchange);
