@@ -1,5 +1,10 @@
 package dev.hireben.spring.reactive.web.demo.common.controller;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+
 import org.jspecify.annotations.Nullable;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.http.HttpHeaders;
@@ -15,6 +20,9 @@ import org.springframework.web.server.ServerWebExchange;
 
 import dev.hireben.spring.reactive.web.demo.common.exception.api.ApplicationException;
 import dev.hireben.spring.reactive.web.demo.common.utility.ExceptionUtil;
+import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.ElementKind;
+import jakarta.validation.Path;
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
 
@@ -52,7 +60,29 @@ final class CommonExceptionHandler extends ResponseEntityExceptionHandler {
   }
 
   // TODO: override handleMethodValidationException
-  // TODO: handleConstraintViolationException
+
+  @ExceptionHandler(ConstraintViolationException.class)
+  Mono<ResponseEntity<Object>> handleValidationException(
+      ConstraintViolationException ex,
+      ServerWebExchange exchange) {
+
+    Collection<Map<String, String>> errors = ex.getConstraintViolations().stream()
+        .map(violation -> Map.of(
+            "field", clientFieldName(violation.getPropertyPath()),
+            "message", violation.getMessage()))
+        .toList();
+
+    HttpStatus status = HttpStatus.BAD_REQUEST;
+
+    ProblemDetail pd = ProblemDetail.forStatusAndDetail(
+        status,
+        getMessageSource().getMessage("common.error.validation_default",
+            null,
+            exchange.getLocaleContext().getLocale()));
+    pd.setProperty("errors", errors);
+
+    return super.createResponseEntity(pd, HttpHeaders.EMPTY, status, exchange);
+  }
 
   @ExceptionHandler(ApplicationException.class)
   Mono<ResponseEntity<Object>> handleApplicationException(
@@ -76,6 +106,17 @@ final class CommonExceptionHandler extends ResponseEntityExceptionHandler {
         exchange);
 
     return super.createResponseEntity(pd, HttpHeaders.EMPTY, status, exchange);
+  }
+
+  private static String clientFieldName(Path path) {
+    List<String> names = new ArrayList<>();
+    for (Path.Node node : path) {
+      ElementKind kind = node.getKind();
+      if (kind == ElementKind.PARAMETER || kind == ElementKind.PROPERTY) {
+        names.add(node.getName());
+      }
+    }
+    return String.join(".", names);
   }
 
 }
