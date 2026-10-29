@@ -59,10 +59,8 @@ final class CommonExceptionHandler extends ResponseEntityExceptionHandler {
     return pd;
   }
 
-  // TODO: override handleMethodValidationException
-
   @ExceptionHandler(ConstraintViolationException.class)
-  Mono<ResponseEntity<Object>> handleValidationException(
+  Mono<ResponseEntity<Object>> handleConstraintViolationException(
       ConstraintViolationException ex,
       ServerWebExchange exchange) {
 
