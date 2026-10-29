@@ -64,6 +64,11 @@ jwt:
     key:
       uri: "${JWT_VERIFY_KEY_URI}"
 
+audit:
+  access-log:
+    exclude:
+      - /actuator
+
 ---
 spring:
   config:
