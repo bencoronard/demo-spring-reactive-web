@@ -23,11 +23,9 @@ import dev.hireben.spring.reactive.web.demo.common.utility.ExceptionUtil;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.ElementKind;
 import jakarta.validation.Path;
-import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
 
 @RestControllerAdvice
-@RequiredArgsConstructor
 final class CommonExceptionHandler extends ResponseEntityExceptionHandler {
 
   @Override
