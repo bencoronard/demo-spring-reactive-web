@@ -53,8 +53,7 @@ final class AuthorizationHeaderResolver implements HandlerMethodArgumentResolver
       throw new TokenInvalidException();
     }
 
-    if (claims == null || claims.getSubject() == null ||
-        claims.getSubject().isBlank()) {
+    if (claims == null || claims.getSubject() == null || claims.getSubject().isBlank()) {
       throw new TokenInvalidException();
     }
 
