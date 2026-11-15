@@ -26,14 +26,12 @@ final class AccessLogFilter implements WebFilter {
 
     long start = System.currentTimeMillis();
 
-    log.info("{}HTTP {} {}",
-        exchange.getLogPrefix(),
+    log.info("HTTP {} {}",
         exchange.getRequest().getMethod(),
         path);
 
     return chain.filter(exchange)
-        .doFinally(signalType -> log.info("{}HTTP {} {}ms",
-            exchange.getLogPrefix(),
+        .doFinally(signalType -> log.info("HTTP {} {}ms",
             exchange.getResponse().getStatusCode(),
             System.currentTimeMillis() - start));
   }

@@ -24,6 +24,8 @@ dependencies {
   implementation platform('software.amazon.awssdk:bom:2.54.19')
   implementation 'software.amazon.awssdk:s3'
   implementation 'software.amazon.awssdk:aws-crt-client'
+  implementation 'org.springframework.boot:spring-boot-micrometer-tracing-brave'
+  implementation 'io.micrometer:micrometer-tracing-bridge-brave'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-webclient'
@@ -31,6 +33,7 @@ dependencies {
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 	annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+  testImplementation 'org.springframework.boot:spring-boot-micrometer-tracing-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-actuator-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-validation-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-webclient-test'

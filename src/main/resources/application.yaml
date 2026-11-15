@@ -17,6 +17,8 @@ management:
 spring:
   main:
     banner-mode: off
+  reactor:
+    context-propagation: auto
   web:
     error:
       whitelabel:
