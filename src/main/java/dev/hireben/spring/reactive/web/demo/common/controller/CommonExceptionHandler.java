@@ -20,13 +20,21 @@ import org.springframework.web.server.ServerWebExchange;
 
 import dev.hireben.spring.reactive.web.demo.common.exception.api.ApplicationException;
 import dev.hireben.spring.reactive.web.demo.common.utility.ExceptionUtil;
+import io.micrometer.tracing.TraceContext;
+import io.micrometer.tracing.Tracer;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.ElementKind;
 import jakarta.validation.Path;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
+@Slf4j
 @RestControllerAdvice
+@RequiredArgsConstructor
 final class CommonExceptionHandler extends ResponseEntityExceptionHandler {
+
+  private final Tracer tracer;
 
   @Override
   protected ProblemDetail createProblemDetail(
@@ -52,7 +60,11 @@ final class CommonExceptionHandler extends ResponseEntityExceptionHandler {
         exchange);
 
     pd.setProperty("code", code);
-    pd.setProperty("id", exchange.getRequest().getId());
+
+    TraceContext context = tracer.currentTraceContext().context();
+    if (context != null) {
+      pd.setProperty("trace", context.traceId());
+    }
 
     return pd;
   }
@@ -100,6 +112,28 @@ final class CommonExceptionHandler extends ResponseEntityExceptionHandler {
         ExceptionUtil.errorMessageSourceKey(ex.getMessageCodePrefix(), ex.getCode().toLowerCase()),
         ex.getArguments(),
         exchange);
+
+    return super.createResponseEntity(pd, HttpHeaders.EMPTY, status, exchange);
+  }
+
+  @ExceptionHandler(Exception.class)
+  Mono<ResponseEntity<Object>> catchAllException(
+      Exception ex,
+      ServerWebExchange exchange) {
+
+    String code = "UNCAUGHT";
+
+    HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
+
+    ProblemDetail pd = createProblemDetail(
+        ex,
+        status,
+        null,
+        String.join(".", "common", "error", code.toLowerCase()),
+        null,
+        exchange);
+
+    log.error("Unhandle exception:", ex);
 
     return super.createResponseEntity(pd, HttpHeaders.EMPTY, status, exchange);
   }
