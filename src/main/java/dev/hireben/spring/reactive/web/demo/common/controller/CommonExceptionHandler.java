@@ -133,7 +133,7 @@ final class CommonExceptionHandler extends ResponseEntityExceptionHandler {
         null,
         exchange);
 
-    log.error("Unhandle exception:", ex);
+    log.error("Unhandled exception:", ex);
 
     return super.createResponseEntity(pd, HttpHeaders.EMPTY, status, exchange);
   }
